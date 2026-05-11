@@ -192,12 +192,9 @@ def _rerank_candidates(
         candidate.confidence = normalized.get(candidate.chunk_id, 0.0)
 
 
-def _rerank_document(candidate: Candidate, docstore: dict[str, DisplayChunk]) -> dict[str, str]:
+def _rerank_document(candidate: Candidate, docstore: dict[str, DisplayChunk]) -> str:
     display_text = docstore[candidate.metadata["display_chunk_id"]].text
-    return {
-        "id": candidate.chunk_id,
-        "text": f"Matched child chunk:\n{candidate.text}\n\nParent display chunk:\n{display_text}",
-    }
+    return f"Matched child chunk:\n{candidate.text}\n\nParent display chunk:\n{display_text}"
 
 
 def _parse_rerank_scores(response: dict[str, Any], candidates: list[Candidate]) -> dict[str, float]:

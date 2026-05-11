@@ -75,7 +75,7 @@ def rerank(
     api_key: str,
     model: str,
     query: str,
-    documents: list[dict[str, Any]],
+    documents: list[str],
     top_n: int,
 ) -> dict[str, Any]:
     return post_json(

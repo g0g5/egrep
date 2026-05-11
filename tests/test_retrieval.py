@@ -138,8 +138,8 @@ def test_search_reranks_with_child_and_parent_text(monkeypatch, tmp_path: Path) 
 
     assert results[0].display_chunk.display_chunk_id == "display-b"
     assert results[0].candidate.confidence == 1.0
-    assert "Matched child chunk:\nchild b" in rerank_documents[0]["text"]
-    assert "Parent display chunk:\nparent b" in rerank_documents[0]["text"]
+    assert "Matched child chunk:\nchild b" in rerank_documents[0]
+    assert "Parent display chunk:\nparent b" in rerank_documents[0]
 
 
 def test_retrieve_bm25_loads_persisted_retriever_without_bm25s_kwargs(

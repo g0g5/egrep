@@ -31,14 +31,14 @@ def test_rerank_posts_model_query_documents_and_top_n() -> None:
         json={"results": [{"index": 0, "relevance_score": 0.9}]},
         status=200,
     )
-    documents = [{"id": "chunk-1", "text": "Matched child chunk:\ntext"}]
+    documents = ["Matched child chunk:\ntext"]
 
     result = rerank(OPENROUTER_BASE_URL, "key", "rerank-model", "query", documents, 5)
 
     assert result == {"results": [{"index": 0, "relevance_score": 0.9}]}
     assert responses.calls[0].request.body == (
         b'{"model": "rerank-model", "query": "query", '
-        b'"documents": [{"id": "chunk-1", "text": "Matched child chunk:\\ntext"}], '
+        b'"documents": ["Matched child chunk:\\ntext"], '
         b'"top_n": 5}'
     )
 

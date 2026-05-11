@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import builtins
 
-from egrep.cli import dispatch, parse_args
+from egrep.cli import build_parser, dispatch, parse_args
 import pytest
 
 from egrep.errors import IndexNotFoundError, IndexWriteError, ProviderAPIError, ProviderConfigError
@@ -24,6 +25,36 @@ def test_parse_config_global() -> None:
 
     assert args.command == "config"
     assert args.global_config is True
+
+
+def test_parse_config_ignores_grep_color_alias_option() -> None:
+    args = parse_args(["--color=auto", "config"])
+
+    assert args.command == "config"
+    assert args.global_config is False
+
+
+def test_parse_query_ignores_grep_color_alias_option() -> None:
+    args = parse_args(["--color", "auto", "where is config loaded"])
+
+    assert args.command == "query"
+    assert args.query == "where is config loaded"
+
+
+def test_help_lists_config_command() -> None:
+    help_text = build_parser().format_help()
+
+    assert "config" in help_text
+    assert "configure embedding and reranking providers" in help_text
+
+
+def test_config_help_lists_global_option(capsys) -> None:
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["config", "--help"])
+
+    help_text = capsys.readouterr().out
+    assert "--global" in help_text
+    assert "write fallback provider configuration" in help_text
 
 
 def test_parse_query_options() -> None:
@@ -61,3 +92,20 @@ def test_dispatch_returns_one_for_unexpected_errors(monkeypatch) -> None:
     monkeypatch.setattr("egrep.cli.run_config", fail_config)
 
     assert dispatch(parse_args(["config"])) == 1
+
+
+def test_dispatch_config_does_not_import_indexing_or_retrieval(monkeypatch) -> None:
+    def ok_config(args: argparse.Namespace) -> int:
+        return 0
+
+    real_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if name in {"egrep.indexing", "egrep.retrieval"}:
+            raise AssertionError(f"unexpected import: {name}")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("egrep.cli.run_config", ok_config)
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    assert dispatch(parse_args(["config"])) == 0
