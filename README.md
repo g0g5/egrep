@@ -20,51 +20,49 @@
 
 ## Installation
 
-From this repository:
+Recommended:
 
 ```bash
-uv sync
+uv tool install egrep --from git+https://github.com/g0g5/egrep
 ```
 
-Run the CLI with:
+Alternatively:
 
 ```bash
-uv run egrep --help
+pip install egrep --from git+https://github.com/g0g5/egrep
 ```
 
-To install the command into your active environment:
+After installation, the global `egrep` command should be available:
 
 ```bash
-uv pip install .
-```
-
-## Quick Start
-
-1. Configure providers:
-
-```bash
-uv run egrep config
-```
-
-Use `--global` to save the provider configuration at `~/.config/egrep/provider.json` instead of the current workspace:
-
-```bash
-uv run egrep config --global
-```
-
-2. Build an index for the current workspace:
-
-```bash
-uv run egrep init
-```
-
-3. Search the indexed workspace:
-
-```bash
-uv run egrep "where is provider configuration loaded?"
+egrep --help
 ```
 
 ## Usage
+
+Configure a global provider:
+
+```bash
+egrep config --global
+```
+
+In a workspace, optionally configure a workspace-specific provider:
+
+```bash
+egrep config
+```
+
+Build an index for the current workspace:
+
+```bash
+egrep init --root . --max-file-size 2MB
+```
+
+Search the indexed workspace:
+
+```bash
+egrep "where is provider configuration loaded?"
+```
 
 ### Configure Providers
 
