@@ -12,10 +12,16 @@ TIMEOUT = (5, 60)
 DEFAULT_EMBED_BATCH_SIZE = 32
 
 
-def post_json(url: str, api_key: str, body: dict[str, Any]) -> dict[str, Any]:
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+def _headers(api_key: str) -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
+
+
+def post_json_any(url: str, api_key: str, body: dict[str, Any]) -> Any:
     try:
-        response = requests.post(url, headers=headers, json=body, timeout=TIMEOUT)
+        response = requests.post(url, headers=_headers(api_key), json=body, timeout=TIMEOUT)
         response.raise_for_status()
         data = response.json()
     except requests.exceptions.RequestException as exc:
@@ -23,9 +29,25 @@ def post_json(url: str, api_key: str, body: dict[str, Any]) -> dict[str, Any]:
     except ValueError as exc:
         raise ProviderAPIError("provider returned invalid JSON") from exc
 
+    return data
+
+
+def post_json(url: str, api_key: str, body: dict[str, Any]) -> dict[str, Any]:
+    data = post_json_any(url, api_key, body)
+
     if not isinstance(data, dict):
         raise ProviderAPIError("provider returned invalid JSON shape")
     return data
+
+
+def rerank_results(payload: Any) -> list[Any]:
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        results = payload.get("results")
+        if isinstance(results, list):
+            return results
+    raise ProviderAPIError("provider rerank response missing results")
 
 
 def embed(
@@ -78,7 +100,7 @@ def rerank(
     documents: list[str],
     top_n: int,
 ) -> dict[str, Any]:
-    return post_json(
+    data = post_json_any(
         f"{base_url.rstrip('/')}/rerank",
         api_key,
         {
@@ -86,5 +108,7 @@ def rerank(
             "query": query,
             "documents": documents,
             "top_n": top_n,
+            "return_documents": False,
         },
     )
+    return {"results": rerank_results(data)}

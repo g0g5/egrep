@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,9 +10,151 @@ from .errors import ProviderConfigError
 
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+SILICONFLOW_BASE_URL = "https://api.siliconflow.cn/v1"
 DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small"
 DEFAULT_RERANKING_MODEL = "cohere/rerank-v3.5"
-REQUIRED_PROVIDER_FIELDS = ("provider", "base_url", "api_key", "model")
+
+
+@dataclass(frozen=True)
+class ProviderSpec:
+    provider: str
+    section: str
+    default_base_url: str | None
+    prompt_base_url: bool
+    requires_api_key: bool
+    prompt_api_key: bool
+    requires_model: bool
+    default_model: str | None
+    transport_kind: str
+
+
+PROVIDER_REGISTRY: dict[str, dict[str, ProviderSpec]] = {
+    "embedding": {
+        "openrouter": ProviderSpec(
+            provider="openrouter",
+            section="embedding",
+            default_base_url=OPENROUTER_BASE_URL,
+            prompt_base_url=False,
+            requires_api_key=True,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=DEFAULT_EMBEDDING_MODEL,
+            transport_kind="openai_embeddings",
+        ),
+        "siliconflow": ProviderSpec(
+            provider="siliconflow",
+            section="embedding",
+            default_base_url=SILICONFLOW_BASE_URL,
+            prompt_base_url=False,
+            requires_api_key=True,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="openai_embeddings",
+        ),
+        "llamacpp": ProviderSpec(
+            provider="llamacpp",
+            section="embedding",
+            default_base_url="http://127.0.0.1:8080/v1",
+            prompt_base_url=True,
+            requires_api_key=False,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="openai_embeddings",
+        ),
+        "vllm": ProviderSpec(
+            provider="vllm",
+            section="embedding",
+            default_base_url="http://127.0.0.1:8000/v1",
+            prompt_base_url=True,
+            requires_api_key=False,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="openai_embeddings",
+        ),
+        "sglang": ProviderSpec(
+            provider="sglang",
+            section="embedding",
+            default_base_url="http://127.0.0.1:30000/v1",
+            prompt_base_url=True,
+            requires_api_key=False,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="openai_embeddings",
+        ),
+    },
+    "reranking": {
+        "openrouter": ProviderSpec(
+            provider="openrouter",
+            section="reranking",
+            default_base_url=OPENROUTER_BASE_URL,
+            prompt_base_url=False,
+            requires_api_key=True,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=DEFAULT_RERANKING_MODEL,
+            transport_kind="rerank",
+        ),
+        "siliconflow": ProviderSpec(
+            provider="siliconflow",
+            section="reranking",
+            default_base_url=SILICONFLOW_BASE_URL,
+            prompt_base_url=False,
+            requires_api_key=True,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="rerank",
+        ),
+        "llamacpp": ProviderSpec(
+            provider="llamacpp",
+            section="reranking",
+            default_base_url="http://127.0.0.1:8080/v1",
+            prompt_base_url=True,
+            requires_api_key=False,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="rerank",
+        ),
+        "vllm": ProviderSpec(
+            provider="vllm",
+            section="reranking",
+            default_base_url="http://127.0.0.1:8000/v1",
+            prompt_base_url=True,
+            requires_api_key=False,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="rerank",
+        ),
+        "sglang": ProviderSpec(
+            provider="sglang",
+            section="reranking",
+            default_base_url="http://127.0.0.1:30000/v1",
+            prompt_base_url=True,
+            requires_api_key=False,
+            prompt_api_key=True,
+            requires_model=True,
+            default_model=None,
+            transport_kind="rerank",
+        ),
+        "none": ProviderSpec(
+            provider="none",
+            section="reranking",
+            default_base_url=None,
+            prompt_base_url=False,
+            requires_api_key=False,
+            prompt_api_key=False,
+            requires_model=False,
+            default_model=None,
+            transport_kind="none",
+        ),
+    },
+}
 
 
 def workspace_provider_path(root: Path | None = None) -> Path:
@@ -45,7 +188,31 @@ def validate_provider_config(config: dict[str, Any]) -> dict[str, Any]:
             raise ProviderConfigError(
                 f"provider configuration missing {section_name} settings"
             )
-        missing = [field for field in REQUIRED_PROVIDER_FIELDS if not section.get(field)]
+        provider = section.get("provider")
+        if not isinstance(provider, str) or not provider:
+            raise ProviderConfigError(
+                f"provider configuration missing {section_name} fields: provider"
+            )
+        spec = PROVIDER_REGISTRY[section_name].get(provider)
+        if spec is None:
+            raise ProviderConfigError(
+                f"unsupported {section_name} provider: {provider}"
+            )
+        if provider == "none":
+            continue
+
+        if spec.default_base_url and not spec.prompt_base_url:
+            section["base_url"] = spec.default_base_url
+        if not spec.requires_api_key:
+            section.setdefault("api_key", "")
+
+        missing = []
+        if spec.prompt_base_url and not section.get("base_url"):
+            missing.append("base_url")
+        if spec.requires_api_key and not section.get("api_key"):
+            missing.append("api_key")
+        if spec.requires_model and not section.get("model"):
+            missing.append("model")
         if missing:
             raise ProviderConfigError(
                 f"provider configuration missing {section_name} fields: "
@@ -68,45 +235,86 @@ def resolve_provider_config(root: Path | None = None) -> dict[str, Any]:
     )
 
 
-def _ask_required(prompt) -> str:
-    value = prompt.ask()
-    if not value:
+def _section_spec(section: str, provider: str) -> ProviderSpec:
+    return PROVIDER_REGISTRY[section][provider]
+
+
+def _prompt_section(questionary, section: str) -> dict[str, Any]:
+    message_prefix = "Embedding" if section == "embedding" else "Reranking"
+
+    answers = questionary.prompt(
+        [
+            {
+                "type": "select",
+                "name": "provider",
+                "message": f"{message_prefix} provider",
+                "choices": list(PROVIDER_REGISTRY[section]),
+            },
+            {
+                "type": "text",
+                "name": "base_url",
+                "message": "Base URL",
+                "default": lambda answer: _section_spec(
+                    section, answer["provider"]
+                ).default_base_url,
+                "when": lambda answer: _section_spec(
+                    section, answer["provider"]
+                ).prompt_base_url,
+            },
+            {
+                "type": "password",
+                "name": "api_key",
+                "message": f"{message_prefix} API key",
+                "when": lambda answer: _section_spec(
+                    section, answer["provider"]
+                ).prompt_api_key,
+            },
+            {
+                "type": "text",
+                "name": "model",
+                "message": f"{message_prefix} model",
+                "default": lambda answer: _section_spec(
+                    section, answer["provider"]
+                ).default_model
+                or "",
+                "when": lambda answer: _section_spec(
+                    section, answer["provider"]
+                ).requires_model,
+            },
+        ]
+    )
+    if not isinstance(answers, dict):
         raise ProviderConfigError("provider configuration cancelled or incomplete")
-    return str(value)
+
+    provider = answers.get("provider")
+    if not isinstance(provider, str) or not provider:
+        raise ProviderConfigError("provider configuration cancelled or incomplete")
+    spec = _section_spec(section, provider)
+    if provider == "none":
+        return {"provider": "none"}
+
+    base_url = answers.get("base_url") or spec.default_base_url
+    api_key = answers.get("api_key", "")
+    model = answers.get("model")
+    if spec.requires_api_key and not api_key:
+        raise ProviderConfigError("provider configuration cancelled or incomplete")
+    if spec.requires_model and not model:
+        raise ProviderConfigError("provider configuration cancelled or incomplete")
+
+    return {
+        "provider": provider,
+        "base_url": base_url,
+        "api_key": str(api_key),
+        "model": str(model),
+    }
 
 
 def _prompt_provider_config() -> dict[str, Any]:
     import questionary
 
-    _ask_required(
-        questionary.select("Embedding provider", choices=["OpenRouter.ai"])
-    )
-    embedding_api_key = _ask_required(questionary.password("Embedding API key"))
-    embedding_model = _ask_required(
-        questionary.text("Embedding model", default=DEFAULT_EMBEDDING_MODEL)
-    )
-
-    _ask_required(
-        questionary.select("Reranking provider", choices=["OpenRouter.ai"])
-    )
-    reranking_api_key = _ask_required(questionary.password("Reranking API key"))
-    reranking_model = _ask_required(
-        questionary.text("Reranking model", default=DEFAULT_RERANKING_MODEL)
-    )
-
     return {
-        "embedding": {
-            "provider": "openrouter",
-            "base_url": OPENROUTER_BASE_URL,
-            "api_key": embedding_api_key,
-            "model": embedding_model,
-        },
-        "reranking": {
-            "provider": "openrouter",
-            "base_url": OPENROUTER_BASE_URL,
-            "api_key": reranking_api_key,
-            "model": reranking_model,
-        },
+        "embedding": _prompt_section(questionary, "embedding"),
+        "reranking": _prompt_section(questionary, "reranking"),
     }
 
 

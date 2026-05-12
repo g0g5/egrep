@@ -5,7 +5,9 @@
 ## Features
 
 - Hybrid search with local BM25 and ChromaDB vector indexes.
-- OpenRouter-compatible embedding and rerank API support.
+- OpenAI-compatible embedding and rerank API support for OpenRouter, SiliconFlow, and local runtimes.
+- Optional reranking, including a persisted `none` provider and per-query `--no-rerank`.
+- Per-stage `egrep init` progress on `stderr`, with the current document shown while indexing.
 - Code-, Markdown-, and text-aware chunking with line-numbered results.
 - Workspace-local indexes stored under `.egrep/`.
 - Human-readable output by default, with verbose JSON for tooling.
@@ -14,7 +16,7 @@
 
 - Python 3.12 or newer
 - `uv`
-- An OpenRouter-compatible API key for embeddings and reranking
+- A configured embedding provider. Hosted providers require an API key; local runtimes can use a blank API key.
 
 ## Installation
 
@@ -70,7 +72,32 @@ uv run egrep "where is provider configuration loaded?"
 egrep config [--global]
 ```
 
-The command prompts for embedding and reranking API keys and models. By default, workspace configuration is written to `.egrep/provider.json`; global configuration is used as a fallback.
+The command prompts for embedding and reranking providers, API keys, models, and local runtime base URLs. By default, workspace configuration is written to `.egrep/provider.json`; global configuration is used as a fallback.
+
+Embedding providers:
+
+- `openrouter`
+- `siliconflow`
+- `llamacpp`
+- `vllm`
+- `sglang`
+
+Reranking providers:
+
+- `openrouter`
+- `siliconflow`
+- `llamacpp`
+- `vllm`
+- `sglang`
+- `none`
+
+Provider behavior:
+
+- OpenRouter uses the fixed base URL `https://openrouter.ai/api/v1` and default models shown below.
+- SiliconFlow uses the fixed base URL `https://api.siliconflow.cn/v1` and prompts for models.
+- Local runtimes prompt for editable `/v1` base URLs: `llamacpp` defaults to `http://127.0.0.1:8080/v1`, `vllm` to `http://127.0.0.1:8000/v1`, and `sglang` to `http://127.0.0.1:30000/v1`.
+- Local runtime API keys are optional. When blank, provider requests omit the `Authorization` header.
+- Reranking provider `none` is persisted as `{ "provider": "none" }` and disables reranking for searches by default.
 
 Default models:
 
@@ -93,6 +120,8 @@ egrep init --exclude "docs/archive/**"
 
 Index artifacts are written under `.egrep/`. Re-running `egrep init` rebuilds the index.
 
+Progress and status output is written to `stderr`; the final `indexed X files, ...` summary remains on `stdout`. Progress is reported per stage for prepare, discovery, chunking, embedding, Chroma writes, BM25 writes, docstore writes, and manifest writes. Discovery, chunking, and embedding progress includes the current document path.
+
 ### Search
 
 ```bash
@@ -109,6 +138,8 @@ egrep "provider request failed" --verbose
 ```
 
 Default output shows ranked snippets with file paths, line ranges, and confidence scores. Verbose output prints JSON with BM25, vector, hybrid, and rerank scores.
+
+Use `--no-rerank` to skip reranking for a single query. If the configured reranking provider is `none`, searches use the same no-rerank behavior automatically and confidence is based on the hybrid score.
 
 ## What Gets Indexed
 

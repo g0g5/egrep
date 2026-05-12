@@ -109,3 +109,23 @@ def test_dispatch_config_does_not_import_indexing_or_retrieval(monkeypatch) -> N
     monkeypatch.setattr(builtins, "__import__", guarded_import)
 
     assert dispatch(parse_args(["config"])) == 0
+
+
+def test_dispatch_init_renders_progress_to_stderr_and_summary_to_stdout(monkeypatch, capsys) -> None:
+    from egrep.indexing import InitProgress
+
+    def fake_run_init(args: argparse.Namespace, progress=None) -> int:
+        assert progress is not None
+        progress(InitProgress("discover", current=1, total=1, path="src/app.py"))
+        progress(InitProgress("write_manifest", current=1, total=1, message="wrote manifest"))
+        print("indexed 1 files, 1 retrieval chunks, 1 display chunks")
+        return 0
+
+    monkeypatch.setattr("egrep.indexing.run_init", fake_run_init)
+
+    assert dispatch(parse_args(["init"])) == 0
+
+    captured = capsys.readouterr()
+    assert captured.out == "indexed 1 files, 1 retrieval chunks, 1 display chunks\n"
+    assert "discover 1/1: src/app.py" in captured.err
+    assert "write manifest 1/1 wrote manifest" in captured.err

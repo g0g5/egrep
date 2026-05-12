@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -70,16 +71,20 @@ def discover_workspace_files(
     includes: list[str] | None = None,
     excludes: list[str] | None = None,
     max_file_size: str = "1MB",
+    progress: Callable[[Path | None, int, int], None] | None = None,
 ) -> list[WorkspaceFile]:
     resolved_root = root.resolve()
     max_bytes = parse_file_size(max_file_size)
     ignore_spec = _ignore_spec(resolved_root, excludes or [])
     include_spec = GitIgnoreSpec.from_lines(includes or []) if includes else None
     files: list[WorkspaceFile] = []
+    candidate_paths = sorted(path for path in resolved_root.rglob("*") if path.is_file())
 
-    for path in sorted(resolved_root.rglob("*")):
-        if not path.is_file():
-            continue
+    if not candidate_paths and progress is not None:
+        progress(None, 0, 0)
+    for index, path in enumerate(candidate_paths, start=1):
+        if progress is not None:
+            progress(path, index, len(candidate_paths))
         relative_path = path.relative_to(resolved_root).as_posix()
         if ignore_spec.match_file(relative_path):
             continue

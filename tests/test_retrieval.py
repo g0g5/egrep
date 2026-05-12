@@ -100,6 +100,64 @@ def test_search_merges_scores_and_deduplicates_without_rerank(monkeypatch, tmp_p
     assert results[0].candidate.bm25_score == 10.0
     assert results[0].candidate.vector_score == 0.2
     assert results[0].candidate.hybrid_score == 0.5
+    assert results[0].candidate.confidence == results[0].candidate.hybrid_score
+    assert results[0].candidate.rerank_score is None
+
+
+def test_search_skips_rerank_when_provider_is_none(monkeypatch, tmp_path: Path) -> None:
+    manifest = write_manifest(tmp_path)
+    write_docstore(
+        tmp_path / ".egrep" / "docstore.jsonl",
+        [display_chunk("display-a", "parent a")],
+    )
+    config = provider_config()
+    config["reranking"] = {"provider": "none"}
+    monkeypatch.setattr("egrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
+    monkeypatch.setattr("egrep.retrieval._retrieve_bm25", lambda *args: [])
+    monkeypatch.setattr(
+        "egrep.retrieval._retrieve_vector",
+        lambda *args: [candidate("chunk-a", "display-a", "child a", 0.9)],
+    )
+    monkeypatch.setattr("egrep.retrieval.rerank", lambda *args: pytest.fail("rerank called"))
+
+    results = search(
+        tmp_path,
+        "needle",
+        top_k=10,
+        no_rerank=False,
+        provider_config=config,
+        manifest=manifest,
+    )
+
+    assert results[0].candidate.confidence == results[0].candidate.hybrid_score
+    assert results[0].candidate.rerank_score is None
+
+
+def test_search_no_rerank_flag_wins_with_configured_provider(monkeypatch, tmp_path: Path) -> None:
+    manifest = write_manifest(tmp_path)
+    write_docstore(
+        tmp_path / ".egrep" / "docstore.jsonl",
+        [display_chunk("display-a", "parent a")],
+    )
+    monkeypatch.setattr("egrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
+    monkeypatch.setattr("egrep.retrieval._retrieve_bm25", lambda *args: [])
+    monkeypatch.setattr(
+        "egrep.retrieval._retrieve_vector",
+        lambda *args: [candidate("chunk-a", "display-a", "child a", 0.9)],
+    )
+    monkeypatch.setattr("egrep.retrieval.rerank", lambda *args: pytest.fail("rerank called"))
+
+    results = search(
+        tmp_path,
+        "needle",
+        top_k=10,
+        no_rerank=True,
+        provider_config=provider_config(),
+        manifest=manifest,
+    )
+
+    assert results[0].candidate.confidence == results[0].candidate.hybrid_score
+    assert results[0].candidate.rerank_score is None
 
 
 def test_search_reranks_with_child_and_parent_text(monkeypatch, tmp_path: Path) -> None:

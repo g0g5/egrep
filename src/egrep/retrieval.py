@@ -87,13 +87,17 @@ def search(
     candidates = _merge_candidates(bm25_hits, vector_hits)[:CANDIDATE_TOP_K]
     docstore = read_docstore(index_dir / "docstore.jsonl")
 
-    if candidates and not no_rerank:
+    if candidates and not _skip_rerank(no_rerank, provider_config):
         _rerank_candidates(candidates, docstore, query, provider_config)
     else:
         for candidate in candidates:
             candidate.confidence = candidate.hybrid_score
 
     return _dedupe_results(candidates, docstore, top_k)
+
+
+def _skip_rerank(no_rerank: bool, provider_config: dict[str, Any]) -> bool:
+    return no_rerank or provider_config.get("reranking", {}).get("provider") == "none"
 
 
 def _retrieve_vector(index_dir: Path, collection: str, query_embedding: list[float]) -> list[Candidate]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from collections.abc import Sequence
 
@@ -83,7 +84,11 @@ def _run_command(args: argparse.Namespace) -> int:
     if args.command == "init":
         from .indexing import run_init
 
-        return run_init(args)
+        renderer = _InitProgressRenderer()
+        try:
+            return run_init(args, progress=renderer)
+        finally:
+            renderer.finish()
     if args.command == "config":
         return run_config(args)
     if args.command == "query":
@@ -108,3 +113,57 @@ def dispatch(args: argparse.Namespace) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     return dispatch(parse_args(argv))
+
+
+class _InitProgressRenderer:
+    def __init__(self) -> None:
+        self._last_stage: str | None = None
+        self._last_width = 0
+        self._active = False
+
+    def __call__(self, event: object) -> None:
+        stage = str(getattr(event, "stage", ""))
+        if self._last_stage is not None and stage != self._last_stage:
+            print(file=sys.stderr)
+            self._last_width = 0
+
+        line = self._format_event(event)
+        padding = " " * max(0, self._last_width - len(line))
+        print(f"\r{line}{padding}", end="", file=sys.stderr, flush=True)
+        self._last_stage = stage
+        self._last_width = len(line)
+        self._active = True
+
+    def finish(self) -> None:
+        if self._active:
+            print(file=sys.stderr)
+            self._active = False
+            self._last_width = 0
+
+    def _format_event(self, event: object) -> str:
+        stage = str(getattr(event, "stage", "")).replace("_", " ")
+        current = getattr(event, "current", None)
+        total = getattr(event, "total", None)
+        message = getattr(event, "message", None)
+        path = getattr(event, "path", None)
+
+        parts = [stage]
+        if current is not None and total is not None:
+            parts.append(f"{current}/{total}")
+        if message:
+            parts.append(str(message))
+
+        line = " ".join(parts)
+        if path:
+            terminal_width = shutil.get_terminal_size(fallback=(80, 24)).columns
+            path_width = max(12, terminal_width - len(line) - 3)
+            line = f"{line}: {_truncate_path(str(path), path_width)}"
+        return line
+
+
+def _truncate_path(path: str, max_width: int) -> str:
+    if len(path) <= max_width:
+        return path
+    if max_width <= 3:
+        return path[-max_width:]
+    return "..." + path[-(max_width - 3) :]

@@ -1,6 +1,11 @@
 {
     "iterations": [
         {
+            "time": "2026-05-12T13:18:16.405416",
+            "name": "local-providers-init-progress",
+            "stage": "completed"
+        },
+        {
             "time": "2026-05-11T14:27:02.997006",
             "name": "egrep-hybrid-search-spec",
             "stage": "completed"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -122,20 +123,35 @@ def chunk_workspace_file(workspace_file: WorkspaceFile) -> ChunkedFile:
     return _build_chunks(workspace_file, spans)
 
 
-def chunk_workspace_files(files: list[WorkspaceFile]) -> ChunkedFile:
+def chunk_workspace_files(
+    files: list[WorkspaceFile],
+    progress: Callable[[WorkspaceFile | None, int, int], None] | None = None,
+) -> ChunkedFile:
     retrieval_chunks: list[RetrievalChunk] = []
     display_chunks: list[DisplayChunk] = []
-    for workspace_file in files:
+    if not files and progress is not None:
+        progress(None, 0, 0)
+    for index, workspace_file in enumerate(files, start=1):
+        if progress is not None:
+            progress(workspace_file, index, len(files))
         chunked = chunk_workspace_file(workspace_file)
         retrieval_chunks.extend(chunked.retrieval_chunks)
         display_chunks.extend(chunked.display_chunks)
     return ChunkedFile(retrieval_chunks=retrieval_chunks, display_chunks=display_chunks)
 
 
-def write_docstore(path: Path, display_chunks: list[DisplayChunk]) -> None:
+def write_docstore(
+    path: Path,
+    display_chunks: list[DisplayChunk],
+    progress: Callable[[DisplayChunk | None, int, int], None] | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as file:
-        for chunk in display_chunks:
+        if not display_chunks and progress is not None:
+            progress(None, 0, 0)
+        for index, chunk in enumerate(display_chunks, start=1):
+            if progress is not None:
+                progress(chunk, index, len(display_chunks))
             file.write(json.dumps(asdict(chunk), sort_keys=True) + "\n")
 
 
