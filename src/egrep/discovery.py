@@ -10,10 +10,7 @@ from .chunking import CODE_EXTENSIONS, MARKDOWN_EXTENSIONS, TEXT_EXTENSIONS
 
 
 BUILT_IN_IGNORES = [
-    ".git/",
-    ".egrep/",
-    ".speciter/",
-    ".venv/",
+    ".*/",
     "venv/",
     "env/",
     "node_modules/",

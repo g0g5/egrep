@@ -26,6 +26,8 @@ def test_discover_uses_built_in_ignores_and_gitignore(tmp_path: Path) -> None:
     (tmp_path / "src" / "keep.py").write_text("print('keep')\n", encoding="utf-8")
     (tmp_path / ".git").mkdir()
     (tmp_path / ".git" / "ignored.py").write_text("ignored\n", encoding="utf-8")
+    (tmp_path / ".direnv").mkdir()
+    (tmp_path / ".direnv" / "flake.nix").write_text("ignored\n", encoding="utf-8")
     (tmp_path / "node_modules").mkdir()
     (tmp_path / "node_modules" / "pkg.js").write_text("ignored\n", encoding="utf-8")
     (tmp_path / "ignored.log").write_text("ignored\n", encoding="utf-8")
