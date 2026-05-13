@@ -4,12 +4,13 @@ import argparse
 import shutil
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from .config import run_config
 from .errors import EgrepError
 
 
-COMMANDS = {"init", "config"}
+COMMANDS = {"init", "config", "list", "install-skill", "uninstall-skill"}
 IGNORED_COMPAT_OPTIONS = {"--color", "--colour"}
 
 
@@ -41,6 +42,25 @@ def build_parser() -> argparse.ArgumentParser:
         dest="global_config",
         action="store_true",
         help="write fallback provider configuration under ~/.config/egrep",
+    )
+
+    list_parser = sub.add_parser(
+        "list",
+        help="list files in the workspace index",
+        description="List files in the workspace index.",
+    )
+    list_parser.add_argument("--root", default=".")
+
+    install_skill = sub.add_parser(
+        "install-skill",
+        help="install the egrep skill to ~/.claude/skills/egrep/",
+        description="Install the egrep skill to ~/.claude/skills/egrep/.",
+    )
+
+    uninstall_skill = sub.add_parser(
+        "uninstall-skill",
+        help="remove the egrep skill from ~/.claude/skills/egrep/",
+        description="Remove the egrep skill from ~/.claude/skills/egrep/.",
     )
 
     return parser
@@ -91,6 +111,14 @@ def _run_command(args: argparse.Namespace) -> int:
             renderer.finish()
     if args.command == "config":
         return run_config(args)
+    if args.command == "list":
+        from .list import run_list
+
+        return run_list(args)
+    if args.command == "install-skill":
+        return _run_install_skill()
+    if args.command == "uninstall-skill":
+        return _run_uninstall_skill()
     if args.command == "query":
         from .retrieval import run_query
 
@@ -113,6 +141,26 @@ def dispatch(args: argparse.Namespace) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     return dispatch(parse_args(argv))
+
+
+def _run_install_skill() -> int:
+    import importlib.resources
+
+    src = importlib.resources.files("egrep") / "skills"
+    dst = Path.home() / ".claude" / "skills" / "egrep"
+    shutil.copytree(str(src), str(dst), dirs_exist_ok=True)
+    print(f"installed skill to {dst}")
+    return 0
+
+
+def _run_uninstall_skill() -> int:
+    dst = Path.home() / ".claude" / "skills" / "egrep"
+    if dst.exists():
+        shutil.rmtree(dst)
+        print(f"uninstalled skill from {dst}")
+    else:
+        print("skill is not installed")
+    return 0
 
 
 class _InitProgressRenderer:

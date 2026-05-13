@@ -67,6 +67,40 @@ def test_parse_query_options() -> None:
     assert args.no_rerank is True
 
 
+def test_parse_list_defaults() -> None:
+    args = parse_args(["list"])
+
+    assert args.command == "list"
+    assert args.root == "."
+
+
+def test_parse_list_with_root() -> None:
+    args = parse_args(["list", "--root", "/tmp/project"])
+
+    assert args.command == "list"
+    assert args.root == "/tmp/project"
+
+
+def test_parse_install_skill() -> None:
+    args = parse_args(["install-skill"])
+
+    assert args.command == "install-skill"
+
+
+def test_parse_uninstall_skill() -> None:
+    args = parse_args(["uninstall-skill"])
+
+    assert args.command == "uninstall-skill"
+
+
+def test_help_lists_new_commands() -> None:
+    help_text = build_parser().format_help()
+
+    assert "list" in help_text
+    assert "install-skill" in help_text
+    assert "uninstall-skill" in help_text
+
+
 @pytest.mark.parametrize(
     ("error", "exit_code"),
     [
@@ -129,3 +163,69 @@ def test_dispatch_init_renders_progress_to_stderr_and_summary_to_stdout(monkeypa
     assert captured.out == "indexed 1 files, 1 retrieval chunks, 1 display chunks\n"
     assert "discover 1/1: src/app.py" in captured.err
     assert "write manifest 1/1 wrote manifest" in captured.err
+
+
+def test_dispatch_list(monkeypatch, capsys) -> None:
+    def fake_run_list(args: argparse.Namespace) -> int:
+        print(f"listing {args.root}")
+        return 0
+
+    monkeypatch.setattr("egrep.list.run_list", fake_run_list)
+
+    assert dispatch(parse_args(["list"])) == 0
+    assert "listing ." in capsys.readouterr().out
+
+
+def test_dispatch_install_skill(monkeypatch, capsys) -> None:
+    def fake_install_skill() -> int:
+        print("installed skill to /home/test/.claude/skills/egrep")
+        return 0
+
+    monkeypatch.setattr("egrep.cli._run_install_skill", fake_install_skill)
+
+    exit_code = dispatch(parse_args(["install-skill"]))
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "installed skill" in captured.out
+    assert "/home/test/.claude/skills/egrep" in captured.out
+
+
+def test_dispatch_uninstall_skill_exists(monkeypatch, capsys) -> None:
+    def fake_uninstall_skill() -> int:
+        print("uninstalled skill from /home/test/.claude/skills/egrep")
+        return 0
+
+    monkeypatch.setattr("egrep.cli._run_uninstall_skill", fake_uninstall_skill)
+
+    exit_code = dispatch(parse_args(["uninstall-skill"]))
+    assert exit_code == 0
+    assert "uninstalled skill" in capsys.readouterr().out
+
+
+def test_dispatch_uninstall_skill_not_exists(monkeypatch, capsys) -> None:
+    def fake_uninstall_skill() -> int:
+        print("skill is not installed")
+        return 0
+
+    monkeypatch.setattr("egrep.cli._run_uninstall_skill", fake_uninstall_skill)
+
+    exit_code = dispatch(parse_args(["uninstall-skill"]))
+    assert exit_code == 0
+    assert "skill is not installed" in capsys.readouterr().out
+
+
+def test_dispatch_list_does_not_import_indexing_or_retrieval_on_other_command(monkeypatch) -> None:
+    def ok_config(args: argparse.Namespace) -> int:
+        return 0
+
+    real_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if name in {"egrep.indexing", "egrep.retrieval"}:
+            raise AssertionError(f"unexpected import: {name}")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("egrep.cli.run_config", ok_config)
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    assert dispatch(parse_args(["config"])) == 0
