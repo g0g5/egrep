@@ -3,10 +3,10 @@ from __future__ import annotations
 import argparse
 import builtins
 
-from egrep.cli import build_parser, dispatch, parse_args
+from wegrep.cli import build_parser, dispatch, parse_args
 import pytest
 
-from egrep.errors import IndexNotFoundError, IndexWriteError, ProviderAPIError, ProviderConfigError
+from wegrep.errors import IndexNotFoundError, IndexWriteError, ProviderAPIError, ProviderConfigError
 
 
 def test_parse_init_defaults() -> None:
@@ -114,7 +114,7 @@ def test_dispatch_returns_documented_expected_exit_codes(monkeypatch, error, exi
     def fail_config(args: argparse.Namespace) -> int:
         raise error
 
-    monkeypatch.setattr("egrep.cli.run_config", fail_config)
+    monkeypatch.setattr("wegrep.cli.run_config", fail_config)
 
     assert dispatch(parse_args(["config"])) == exit_code
 
@@ -123,7 +123,7 @@ def test_dispatch_returns_one_for_unexpected_errors(monkeypatch) -> None:
     def fail_config(args: argparse.Namespace) -> int:
         raise RuntimeError("boom")
 
-    monkeypatch.setattr("egrep.cli.run_config", fail_config)
+    monkeypatch.setattr("wegrep.cli.run_config", fail_config)
 
     assert dispatch(parse_args(["config"])) == 1
 
@@ -135,18 +135,18 @@ def test_dispatch_config_does_not_import_indexing_or_retrieval(monkeypatch) -> N
     real_import = builtins.__import__
 
     def guarded_import(name, *args, **kwargs):
-        if name in {"egrep.indexing", "egrep.retrieval"}:
+        if name in {"wegrep.indexing", "wegrep.retrieval"}:
             raise AssertionError(f"unexpected import: {name}")
         return real_import(name, *args, **kwargs)
 
-    monkeypatch.setattr("egrep.cli.run_config", ok_config)
+    monkeypatch.setattr("wegrep.cli.run_config", ok_config)
     monkeypatch.setattr(builtins, "__import__", guarded_import)
 
     assert dispatch(parse_args(["config"])) == 0
 
 
 def test_dispatch_init_renders_progress_to_stderr_and_summary_to_stdout(monkeypatch, capsys) -> None:
-    from egrep.indexing import InitProgress
+    from wegrep.indexing import InitProgress
 
     def fake_run_init(args: argparse.Namespace, progress=None) -> int:
         assert progress is not None
@@ -155,7 +155,7 @@ def test_dispatch_init_renders_progress_to_stderr_and_summary_to_stdout(monkeypa
         print("indexed 1 files, 1 retrieval chunks, 1 display chunks")
         return 0
 
-    monkeypatch.setattr("egrep.indexing.run_init", fake_run_init)
+    monkeypatch.setattr("wegrep.indexing.run_init", fake_run_init)
 
     assert dispatch(parse_args(["init"])) == 0
 
@@ -170,7 +170,7 @@ def test_dispatch_list(monkeypatch, capsys) -> None:
         print(f"listing {args.root}")
         return 0
 
-    monkeypatch.setattr("egrep.list.run_list", fake_run_list)
+    monkeypatch.setattr("wegrep.list.run_list", fake_run_list)
 
     assert dispatch(parse_args(["list"])) == 0
     assert "listing ." in capsys.readouterr().out
@@ -178,24 +178,24 @@ def test_dispatch_list(monkeypatch, capsys) -> None:
 
 def test_dispatch_install_skill(monkeypatch, capsys) -> None:
     def fake_install_skill() -> int:
-        print("installed skill to /home/test/.claude/skills/egrep")
+        print("installed skill to /home/test/.claude/skills/wegrep")
         return 0
 
-    monkeypatch.setattr("egrep.cli._run_install_skill", fake_install_skill)
+    monkeypatch.setattr("wegrep.cli._run_install_skill", fake_install_skill)
 
     exit_code = dispatch(parse_args(["install-skill"]))
     assert exit_code == 0
     captured = capsys.readouterr()
     assert "installed skill" in captured.out
-    assert "/home/test/.claude/skills/egrep" in captured.out
+    assert "/home/test/.claude/skills/wegrep" in captured.out
 
 
 def test_dispatch_uninstall_skill_exists(monkeypatch, capsys) -> None:
     def fake_uninstall_skill() -> int:
-        print("uninstalled skill from /home/test/.claude/skills/egrep")
+        print("uninstalled skill from /home/test/.claude/skills/wegrep")
         return 0
 
-    monkeypatch.setattr("egrep.cli._run_uninstall_skill", fake_uninstall_skill)
+    monkeypatch.setattr("wegrep.cli._run_uninstall_skill", fake_uninstall_skill)
 
     exit_code = dispatch(parse_args(["uninstall-skill"]))
     assert exit_code == 0
@@ -207,7 +207,7 @@ def test_dispatch_uninstall_skill_not_exists(monkeypatch, capsys) -> None:
         print("skill is not installed")
         return 0
 
-    monkeypatch.setattr("egrep.cli._run_uninstall_skill", fake_uninstall_skill)
+    monkeypatch.setattr("wegrep.cli._run_uninstall_skill", fake_uninstall_skill)
 
     exit_code = dispatch(parse_args(["uninstall-skill"]))
     assert exit_code == 0
@@ -221,11 +221,11 @@ def test_dispatch_list_does_not_import_indexing_or_retrieval_on_other_command(mo
     real_import = builtins.__import__
 
     def guarded_import(name, *args, **kwargs):
-        if name in {"egrep.indexing", "egrep.retrieval"}:
+        if name in {"wegrep.indexing", "wegrep.retrieval"}:
             raise AssertionError(f"unexpected import: {name}")
         return real_import(name, *args, **kwargs)
 
-    monkeypatch.setattr("egrep.cli.run_config", ok_config)
+    monkeypatch.setattr("wegrep.cli.run_config", ok_config)
     monkeypatch.setattr(builtins, "__import__", guarded_import)
 
     assert dispatch(parse_args(["config"])) == 0

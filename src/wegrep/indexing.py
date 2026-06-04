@@ -12,7 +12,7 @@ from pathlib import Path
 from .config import resolve_provider_config
 from .chunking import RetrievalChunk, chunk_workspace_files, write_docstore
 from .discovery import discover_workspace_files
-from .errors import EgrepError, IndexWriteError
+from .errors import WegrepError, IndexWriteError
 from .providers import embed_batched
 
 
@@ -41,7 +41,7 @@ def build_index(
     provider_config: dict,
     progress: ProgressCallback | None = None,
 ) -> dict:
-    index_dir = root / ".egrep"
+    index_dir = root / ".wegrep"
     _emit(progress, InitProgress("prepare", current=0, total=1, message="preparing index"))
     _prepare_rebuild(index_dir)
     _emit(progress, InitProgress("prepare", current=1, total=1, message="prepared index"))
@@ -139,7 +139,7 @@ def run_init(args: argparse.Namespace, progress: ProgressCallback | None = None)
             provider_config=provider_config,
             progress=progress,
         )
-    except EgrepError:
+    except WegrepError:
         raise
     except Exception as exc:
         raise IndexWriteError(f"failed to write index: {exc}") from exc
@@ -233,7 +233,7 @@ def _write_bm25(persist_dir: Path, chunks: list[RetrievalChunk]) -> None:
 
 def _chroma_collection_name(collection: str) -> str:
     name = re.sub(r"[^A-Za-z0-9._-]+", "_", collection).strip("._-") or "default"
-    name = f"egrep_{name}"
+    name = f"wegrep_{name}"
     if len(name) > 63:
         name = name[:63].rstrip("._-")
     return name

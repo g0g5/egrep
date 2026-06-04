@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .config import run_config
-from .errors import EgrepError
+from .errors import WegrepError
 
 
 COMMANDS = {"init", "config", "list", "install-skill", "uninstall-skill"}
@@ -16,7 +16,7 @@ IGNORED_COMPAT_OPTIONS = {"--color", "--colour"}
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="egrep",
+        prog="wegrep",
         description="Hybrid workspace search CLI for coding agents",
     )
     sub = parser.add_subparsers(dest="command", metavar="command")
@@ -41,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--global",
         dest="global_config",
         action="store_true",
-        help="write fallback provider configuration under ~/.config/egrep",
+        help="write fallback provider configuration under ~/.config/wegrep",
     )
 
     list_parser = sub.add_parser(
@@ -53,21 +53,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     install_skill = sub.add_parser(
         "install-skill",
-        help="install the egrep skill to ~/.claude/skills/egrep/",
-        description="Install the egrep skill to ~/.claude/skills/egrep/.",
+        help="install the wegrep skill to ~/.claude/skills/wegrep/",
+        description="Install the wegrep skill to ~/.claude/skills/wegrep/.",
     )
 
     uninstall_skill = sub.add_parser(
         "uninstall-skill",
-        help="remove the egrep skill from ~/.claude/skills/egrep/",
-        description="Remove the egrep skill from ~/.claude/skills/egrep/.",
+        help="remove the wegrep skill from ~/.claude/skills/wegrep/",
+        description="Remove the wegrep skill from ~/.claude/skills/wegrep/.",
     )
 
     return parser
 
 
 def build_query_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="egrep")
+    parser = argparse.ArgumentParser(prog="wegrep")
     parser.add_argument("query")
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -131,7 +131,7 @@ def _run_command(args: argparse.Namespace) -> int:
 def dispatch(args: argparse.Namespace) -> int:
     try:
         return _run_command(args)
-    except EgrepError as exc:
+    except WegrepError as exc:
         print(str(exc), file=sys.stderr)
         return exc.exit_code
     except Exception as exc:
@@ -146,15 +146,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _run_install_skill() -> int:
     import importlib.resources
 
-    src = importlib.resources.files("egrep") / "skills"
-    dst = Path.home() / ".claude" / "skills" / "egrep"
+    src = importlib.resources.files("wegrep") / "skills"
+    dst = Path.home() / ".claude" / "skills" / "wegrep"
     shutil.copytree(str(src), str(dst), dirs_exist_ok=True)
     print(f"installed skill to {dst}")
     return 0
 
 
 def _run_uninstall_skill() -> int:
-    dst = Path.home() / ".claude" / "skills" / "egrep"
+    dst = Path.home() / ".claude" / "skills" / "wegrep"
     if dst.exists():
         shutil.rmtree(dst)
         print(f"uninstalled skill from {dst}")

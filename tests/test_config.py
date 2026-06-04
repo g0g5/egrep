@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from egrep.config import (
+from wegrep.config import (
     DEFAULT_EMBEDDING_MODEL,
     DEFAULT_RERANKING_MODEL,
     OPENROUTER_BASE_URL,
@@ -17,7 +17,7 @@ from egrep.config import (
     run_config,
     validate_provider_config,
 )
-from egrep.errors import ProviderConfigError
+from wegrep.errors import ProviderConfigError
 
 
 def provider_config(api_key: str = "key") -> dict[str, dict[str, str]]:
@@ -48,8 +48,8 @@ def test_resolve_provider_config_prefers_workspace(monkeypatch, tmp_path) -> Non
     workspace.mkdir()
     monkeypatch.setattr(Path, "home", lambda: home)
     monkeypatch.chdir(workspace)
-    write_config(home / ".config" / "egrep" / "provider.json", provider_config("global"))
-    write_config(workspace / ".egrep" / "provider.json", provider_config("workspace"))
+    write_config(home / ".config" / "wegrep" / "provider.json", provider_config("global"))
+    write_config(workspace / ".wegrep" / "provider.json", provider_config("workspace"))
 
     config = resolve_provider_config()
 
@@ -63,7 +63,7 @@ def test_resolve_provider_config_uses_global_fallback(monkeypatch, tmp_path) -> 
     workspace.mkdir()
     monkeypatch.setattr(Path, "home", lambda: home)
     monkeypatch.chdir(workspace)
-    write_config(home / ".config" / "egrep" / "provider.json", provider_config("global"))
+    write_config(home / ".config" / "wegrep" / "provider.json", provider_config("global"))
 
     config = resolve_provider_config()
 
@@ -113,7 +113,7 @@ def test_run_config_writes_workspace_provider(monkeypatch, tmp_path) -> None:
 
     assert run_config(argparse.Namespace(global_config=False)) == 0
 
-    data = json.loads((tmp_path / ".egrep" / "provider.json").read_text())
+    data = json.loads((tmp_path / ".wegrep" / "provider.json").read_text())
     assert data == provider_config("secret")
 
 
@@ -139,7 +139,7 @@ def test_run_config_writes_global_provider(monkeypatch, tmp_path) -> None:
 
     assert run_config(argparse.Namespace(global_config=True)) == 0
 
-    data = json.loads((home / ".config" / "egrep" / "provider.json").read_text())
+    data = json.loads((home / ".config" / "wegrep" / "provider.json").read_text())
     assert data == provider_config("secret")
 
 
@@ -178,7 +178,7 @@ def test_run_config_writes_siliconflow_without_base_url_prompt(monkeypatch, tmp_
 
     assert run_config(argparse.Namespace(global_config=False)) == 0
 
-    data = json.loads((tmp_path / ".egrep" / "provider.json").read_text())
+    data = json.loads((tmp_path / ".wegrep" / "provider.json").read_text())
     assert data == {
         "embedding": {
             "provider": "siliconflow",
@@ -217,7 +217,7 @@ def test_run_config_writes_local_provider_and_rerank_none(monkeypatch, tmp_path)
 
     assert run_config(argparse.Namespace(global_config=False)) == 0
 
-    data = json.loads((tmp_path / ".egrep" / "provider.json").read_text())
+    data = json.loads((tmp_path / ".wegrep" / "provider.json").read_text())
     assert data == {
         "embedding": {
             "provider": "vllm",

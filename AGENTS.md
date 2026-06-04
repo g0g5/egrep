@@ -1,16 +1,16 @@
 ## Project Overview
-`egrep` is a Python 3.12 CLI for hybrid workspace search, using local ChromaDB/BM25 indexes with OpenAI-compatible embedding and rerank providers.
+`wegrep` is a Python 3.12 CLI for hybrid workspace search, using local ChromaDB/BM25 indexes with OpenAI-compatible embedding and rerank providers.
 
 ## Structure Map
 ```text
-egrep/
+wegrep/
 |- pyproject.toml              # Project metadata, dependencies, console script, pytest config, and Hatchling build setup
 |- uv.lock                     # Locked dependency graph for uv
 |- README.md                   # User-facing feature, install, usage, and development docs
-|- main.py                     # Root launcher delegating to the egrep CLI
+|- main.py                     # Root launcher delegating to the wegrep CLI
 |- src/                        # Runtime package source
-|  \- egrep/                   # Main CLI package
-|     |- __main__.py           # `python -m egrep` entrypoint
+|  \- wegrep/                  # Main CLI package
+|     |- __main__.py           # `python -m wegrep` entrypoint
 |     |- cli.py                # Argparse command parsing, dispatch, and init progress rendering
 |     |- errors.py             # Shared expected error types and exit codes
 |     |- config.py             # Provider registry, prompting, validation, and workspace/global config resolution

@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from egrep.chunking import DisplayChunk, write_docstore
-from egrep.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_RERANKING_MODEL, OPENROUTER_BASE_URL
-from egrep.errors import IndexNotFoundError
-from egrep.retrieval import Candidate, SearchResult, _retrieve_bm25, load_manifest, run_query, search
+from wegrep.chunking import DisplayChunk, write_docstore
+from wegrep.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_RERANKING_MODEL, OPENROUTER_BASE_URL
+from wegrep.errors import IndexNotFoundError
+from wegrep.retrieval import Candidate, SearchResult, _retrieve_bm25, load_manifest, run_query, search
 
 
 def provider_config() -> dict[str, dict[str, str]]:
@@ -58,7 +58,7 @@ def candidate(chunk_id: str, display_chunk_id: str, text: str, score: float | No
 
 def write_manifest(root: Path) -> dict[str, object]:
     manifest = {"version": 1, "root": str(root), "collection": "default"}
-    index_dir = root / ".egrep"
+    index_dir = root / ".wegrep"
     index_dir.mkdir()
     (index_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     return manifest
@@ -69,22 +69,22 @@ def test_load_manifest_missing_index_exits_three(tmp_path: Path) -> None:
         load_manifest(tmp_path)
 
     assert excinfo.value.exit_code == 3
-    assert "egrep init" in str(excinfo.value)
+    assert "wegrep init" in str(excinfo.value)
 
 
 def test_search_merges_scores_and_deduplicates_without_rerank(monkeypatch, tmp_path: Path) -> None:
     manifest = write_manifest(tmp_path)
     write_docstore(
-        tmp_path / ".egrep" / "docstore.jsonl",
+        tmp_path / ".wegrep" / "docstore.jsonl",
         [display_chunk("display-a", "parent a"), display_chunk("display-b", "parent b")],
     )
     bm25_hit = candidate("chunk-a", "display-a", "bm25 child")
     bm25_hit.bm25_score = 10.0
     vector_a = candidate("chunk-a", "display-a", "vector child", 0.2)
     vector_b = candidate("chunk-b", "display-b", "vector child b", 0.9)
-    monkeypatch.setattr("egrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
-    monkeypatch.setattr("egrep.retrieval._retrieve_bm25", lambda *args: [bm25_hit])
-    monkeypatch.setattr("egrep.retrieval._retrieve_vector", lambda *args: [vector_a, vector_b])
+    monkeypatch.setattr("wegrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
+    monkeypatch.setattr("wegrep.retrieval._retrieve_bm25", lambda *args: [bm25_hit])
+    monkeypatch.setattr("wegrep.retrieval._retrieve_vector", lambda *args: [vector_a, vector_b])
 
     results = search(
         tmp_path,
@@ -107,18 +107,18 @@ def test_search_merges_scores_and_deduplicates_without_rerank(monkeypatch, tmp_p
 def test_search_skips_rerank_when_provider_is_none(monkeypatch, tmp_path: Path) -> None:
     manifest = write_manifest(tmp_path)
     write_docstore(
-        tmp_path / ".egrep" / "docstore.jsonl",
+        tmp_path / ".wegrep" / "docstore.jsonl",
         [display_chunk("display-a", "parent a")],
     )
     config = provider_config()
     config["reranking"] = {"provider": "none"}
-    monkeypatch.setattr("egrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
-    monkeypatch.setattr("egrep.retrieval._retrieve_bm25", lambda *args: [])
+    monkeypatch.setattr("wegrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
+    monkeypatch.setattr("wegrep.retrieval._retrieve_bm25", lambda *args: [])
     monkeypatch.setattr(
-        "egrep.retrieval._retrieve_vector",
+        "wegrep.retrieval._retrieve_vector",
         lambda *args: [candidate("chunk-a", "display-a", "child a", 0.9)],
     )
-    monkeypatch.setattr("egrep.retrieval.rerank", lambda *args: pytest.fail("rerank called"))
+    monkeypatch.setattr("wegrep.retrieval.rerank", lambda *args: pytest.fail("rerank called"))
 
     results = search(
         tmp_path,
@@ -136,16 +136,16 @@ def test_search_skips_rerank_when_provider_is_none(monkeypatch, tmp_path: Path) 
 def test_search_no_rerank_flag_wins_with_configured_provider(monkeypatch, tmp_path: Path) -> None:
     manifest = write_manifest(tmp_path)
     write_docstore(
-        tmp_path / ".egrep" / "docstore.jsonl",
+        tmp_path / ".wegrep" / "docstore.jsonl",
         [display_chunk("display-a", "parent a")],
     )
-    monkeypatch.setattr("egrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
-    monkeypatch.setattr("egrep.retrieval._retrieve_bm25", lambda *args: [])
+    monkeypatch.setattr("wegrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
+    monkeypatch.setattr("wegrep.retrieval._retrieve_bm25", lambda *args: [])
     monkeypatch.setattr(
-        "egrep.retrieval._retrieve_vector",
+        "wegrep.retrieval._retrieve_vector",
         lambda *args: [candidate("chunk-a", "display-a", "child a", 0.9)],
     )
-    monkeypatch.setattr("egrep.retrieval.rerank", lambda *args: pytest.fail("rerank called"))
+    monkeypatch.setattr("wegrep.retrieval.rerank", lambda *args: pytest.fail("rerank called"))
 
     results = search(
         tmp_path,
@@ -163,13 +163,13 @@ def test_search_no_rerank_flag_wins_with_configured_provider(monkeypatch, tmp_pa
 def test_search_reranks_with_child_and_parent_text(monkeypatch, tmp_path: Path) -> None:
     manifest = write_manifest(tmp_path)
     write_docstore(
-        tmp_path / ".egrep" / "docstore.jsonl",
+        tmp_path / ".wegrep" / "docstore.jsonl",
         [display_chunk("display-a", "parent a"), display_chunk("display-b", "parent b")],
     )
-    monkeypatch.setattr("egrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
-    monkeypatch.setattr("egrep.retrieval._retrieve_bm25", lambda *args: [])
+    monkeypatch.setattr("wegrep.retrieval.embed", lambda *args: [[0.1, 0.2]])
+    monkeypatch.setattr("wegrep.retrieval._retrieve_bm25", lambda *args: [])
     monkeypatch.setattr(
-        "egrep.retrieval._retrieve_vector",
+        "wegrep.retrieval._retrieve_vector",
         lambda *args: [candidate("chunk-a", "display-a", "child a", 0.1), candidate("chunk-b", "display-b", "child b", 0.9)],
     )
     rerank_documents = []
@@ -183,7 +183,7 @@ def test_search_reranks_with_child_and_parent_text(monkeypatch, tmp_path: Path) 
             ]
         }
 
-    monkeypatch.setattr("egrep.retrieval.rerank", fake_rerank)
+    monkeypatch.setattr("wegrep.retrieval.rerank", fake_rerank)
 
     results = search(
         tmp_path,
@@ -217,17 +217,17 @@ def test_retrieve_bm25_loads_persisted_retriever_without_bm25s_kwargs(
             return []
 
     def fake_from_persist_dir(path):
-        assert path == str(tmp_path / ".egrep" / "bm25")
+        assert path == str(tmp_path / ".wegrep" / "bm25")
         return FakeRetriever()
 
     monkeypatch.setattr(BM25Retriever, "from_persist_dir", fake_from_persist_dir)
 
-    assert _retrieve_bm25(tmp_path / ".egrep", "needle") == []
+    assert _retrieve_bm25(tmp_path / ".wegrep", "needle") == []
 
 
 def test_run_query_requires_manifest_before_provider_config(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("egrep.retrieval.resolve_provider_config", lambda root: pytest.fail("provider resolved"))
+    monkeypatch.setattr("wegrep.retrieval.resolve_provider_config", lambda root: pytest.fail("provider resolved"))
 
     with pytest.raises(IndexNotFoundError):
         run_query(argparse.Namespace(query="needle", top_k=10, no_rerank=True))
@@ -238,8 +238,8 @@ def test_run_query_default_output_is_human_readable(monkeypatch, tmp_path: Path,
     result = SearchResult(display_chunk=display_chunk("display-a", "parent text\n"), candidate=candidate("chunk-a", "display-a", "child"))
     result.candidate.confidence = 0.913
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("egrep.retrieval.resolve_provider_config", lambda root: provider_config())
-    monkeypatch.setattr("egrep.retrieval.search", lambda *args, **kwargs: [result])
+    monkeypatch.setattr("wegrep.retrieval.resolve_provider_config", lambda root: provider_config())
+    monkeypatch.setattr("wegrep.retrieval.search", lambda *args, **kwargs: [result])
 
     exit_code = run_query(argparse.Namespace(query="needle", top_k=10, no_rerank=True, verbose=False))
 
@@ -258,8 +258,8 @@ def test_run_query_verbose_output_is_json(monkeypatch, tmp_path: Path, capsys) -
     result.candidate.rerank_score = 0.91
     result.candidate.confidence = 1.0
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("egrep.retrieval.resolve_provider_config", lambda root: provider_config())
-    monkeypatch.setattr("egrep.retrieval.search", lambda *args, **kwargs: [result])
+    monkeypatch.setattr("wegrep.retrieval.resolve_provider_config", lambda root: provider_config())
+    monkeypatch.setattr("wegrep.retrieval.search", lambda *args, **kwargs: [result])
     write_manifest(tmp_path)
 
     exit_code = run_query(argparse.Namespace(query="needle", top_k=10, no_rerank=False, verbose=True))

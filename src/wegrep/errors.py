@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 
-class EgrepError(RuntimeError):
+class WegrepError(RuntimeError):
     """Base class for expected command failures."""
 
     exit_code = 1
 
 
-class IndexNotFoundError(EgrepError):
+class IndexNotFoundError(WegrepError):
     exit_code = 3
 
 
-class ProviderConfigError(EgrepError):
+class ProviderConfigError(WegrepError):
     exit_code = 4
 
 
-class ProviderAPIError(EgrepError):
+class ProviderAPIError(WegrepError):
     exit_code = 5
 
 
-class IndexWriteError(EgrepError):
+class IndexWriteError(WegrepError):
     exit_code = 6

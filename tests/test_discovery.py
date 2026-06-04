@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from egrep.discovery import (
+from wegrep.discovery import (
     classify_workspace_file,
     discover_workspace_files,
     parse_file_size,

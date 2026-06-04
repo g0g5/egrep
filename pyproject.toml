@@ -1,5 +1,5 @@
 [project]
-name = "egrep"
+name = "wegrep"
 version = "0.1.0"
 description = "Hybrid workspace search CLI for coding agents"
 readme = "README.md"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-egrep = "egrep.cli:main"
+wegrep = "wegrep.cli:main"
 
 [dependency-groups]
 dev = [

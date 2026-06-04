@@ -1,4 +1,4 @@
-from egrep.cli import main
+from wegrep.cli import main
 
 
 if __name__ == "__main__":

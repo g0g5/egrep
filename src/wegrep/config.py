@@ -158,11 +158,11 @@ PROVIDER_REGISTRY: dict[str, dict[str, ProviderSpec]] = {
 
 
 def workspace_provider_path(root: Path | None = None) -> Path:
-    return (Path.cwd() if root is None else root) / ".egrep" / "provider.json"
+    return (Path.cwd() if root is None else root) / ".wegrep" / "provider.json"
 
 
 def global_provider_path() -> Path:
-    return Path.home() / ".config" / "egrep" / "provider.json"
+    return Path.home() / ".config" / "wegrep" / "provider.json"
 
 
 def provider_config_path(global_config: bool, root: Path | None = None) -> Path:
@@ -231,7 +231,7 @@ def resolve_provider_config(root: Path | None = None) -> dict[str, Any]:
         return validate_provider_config(_read_provider_config(fallback_path))
 
     raise ProviderConfigError(
-        "provider configuration missing; run `egrep config` or `egrep config --global`"
+        "provider configuration missing; run `wegrep config` or `wegrep config --global`"
     )
 
 

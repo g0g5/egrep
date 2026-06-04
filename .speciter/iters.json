@@ -1,6 +1,11 @@
 {
     "iterations": [
         {
+            "time": "2026-06-04T16:35:41.922740",
+            "name": "rename-egrep-to-wegrep",
+            "stage": "completed"
+        },
+        {
             "time": "2026-05-12T13:18:16.405416",
             "name": "local-providers-init-progress",
             "stage": "completed"

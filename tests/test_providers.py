@@ -4,9 +4,9 @@ import pytest
 import responses
 from responses import matchers
 
-from egrep.config import SILICONFLOW_BASE_URL
-from egrep.errors import ProviderAPIError
-from egrep.providers import OPENROUTER_BASE_URL, embed, embed_batched, rerank
+from wegrep.config import SILICONFLOW_BASE_URL
+from wegrep.errors import ProviderAPIError
+from wegrep.providers import OPENROUTER_BASE_URL, embed, embed_batched, rerank
 
 
 @responses.activate

@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from egrep.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_RERANKING_MODEL, OPENROUTER_BASE_URL
-from egrep.errors import IndexWriteError
-from egrep.indexing import InitProgress, build_index, run_init
+from wegrep.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_RERANKING_MODEL, OPENROUTER_BASE_URL
+from wegrep.errors import IndexWriteError
+from wegrep.indexing import InitProgress, build_index, run_init
 
 
 def provider_config() -> dict[str, dict[str, str]]:
@@ -40,10 +40,10 @@ def fake_embeddings(
 def test_build_index_writes_expected_layout_and_manifest(monkeypatch, tmp_path: Path) -> None:
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "app.py").write_text("def answer():\n    return 42\n", encoding="utf-8")
-    (tmp_path / ".egrep").mkdir()
-    provider_path = tmp_path / ".egrep" / "provider.json"
+    (tmp_path / ".wegrep").mkdir()
+    provider_path = tmp_path / ".wegrep" / "provider.json"
     provider_path.write_text(json.dumps(provider_config()), encoding="utf-8")
-    monkeypatch.setattr("egrep.indexing.embed_batched", fake_embeddings)
+    monkeypatch.setattr("wegrep.indexing.embed_batched", fake_embeddings)
 
     manifest = build_index(
         tmp_path,
@@ -55,10 +55,10 @@ def test_build_index_writes_expected_layout_and_manifest(monkeypatch, tmp_path: 
     )
 
     assert provider_path.exists()
-    assert (tmp_path / ".egrep" / "manifest.json").exists()
-    assert (tmp_path / ".egrep" / "chroma").is_dir()
-    assert (tmp_path / ".egrep" / "bm25").is_dir()
-    assert (tmp_path / ".egrep" / "docstore.jsonl").exists()
+    assert (tmp_path / ".wegrep" / "manifest.json").exists()
+    assert (tmp_path / ".wegrep" / "chroma").is_dir()
+    assert (tmp_path / ".wegrep" / "bm25").is_dir()
+    assert (tmp_path / ".wegrep" / "docstore.jsonl").exists()
     assert manifest["version"] == 1
     assert manifest["root"] == str(tmp_path)
     assert manifest["collection"] == "default"
@@ -74,7 +74,7 @@ def test_build_index_allows_reranking_provider_none(monkeypatch, tmp_path: Path)
     (tmp_path / "src" / "app.py").write_text("def answer():\n    return 42\n", encoding="utf-8")
     config = provider_config()
     config["reranking"] = {"provider": "none"}
-    monkeypatch.setattr("egrep.indexing.embed_batched", fake_embeddings)
+    monkeypatch.setattr("wegrep.indexing.embed_batched", fake_embeddings)
 
     manifest = build_index(
         tmp_path,
@@ -85,7 +85,7 @@ def test_build_index_allows_reranking_provider_none(monkeypatch, tmp_path: Path)
         provider_config=config,
     )
 
-    persisted = json.loads((tmp_path / ".egrep" / "manifest.json").read_text(encoding="utf-8"))
+    persisted = json.loads((tmp_path / ".wegrep" / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["rerank_model"] is None
     assert persisted["rerank_model"] is None
 
@@ -93,7 +93,7 @@ def test_build_index_allows_reranking_provider_none(monkeypatch, tmp_path: Path)
 def test_build_index_emits_progress_events(monkeypatch, tmp_path: Path) -> None:
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "app.py").write_text("def answer():\n    return 42\n", encoding="utf-8")
-    monkeypatch.setattr("egrep.indexing.embed_batched", fake_embeddings)
+    monkeypatch.setattr("wegrep.indexing.embed_batched", fake_embeddings)
     events: list[InitProgress] = []
 
     build_index(
@@ -127,8 +127,8 @@ def test_run_init_resolves_root_and_maps_write_failures(monkeypatch, tmp_path: P
     def fail_build(*args, **kwargs):
         raise OSError("disk full")
 
-    monkeypatch.setattr("egrep.indexing.resolve_provider_config", lambda root: provider_config())
-    monkeypatch.setattr("egrep.indexing.build_index", fail_build)
+    monkeypatch.setattr("wegrep.indexing.resolve_provider_config", lambda root: provider_config())
+    monkeypatch.setattr("wegrep.indexing.build_index", fail_build)
 
     args = argparse.Namespace(
         root=str(tmp_path),
@@ -152,8 +152,8 @@ def test_run_init_uses_current_directory_by_default(monkeypatch, tmp_path: Path)
         return {"file_count": 0, "retrieval_chunk_count": 0, "display_chunk_count": 0}
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("egrep.indexing.resolve_provider_config", lambda root: provider_config())
-    monkeypatch.setattr("egrep.indexing.build_index", fake_build)
+    monkeypatch.setattr("wegrep.indexing.resolve_provider_config", lambda root: provider_config())
+    monkeypatch.setattr("wegrep.indexing.build_index", fake_build)
 
     exit_code = run_init(
         argparse.Namespace(

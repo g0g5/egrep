@@ -60,9 +60,9 @@ def run_query(args: argparse.Namespace) -> int:
 
 
 def load_manifest(root: Path) -> dict[str, Any]:
-    path = root / ".egrep" / "manifest.json"
+    path = root / ".wegrep" / "manifest.json"
     if not path.exists():
-        raise IndexNotFoundError("index not found; run `egrep init` first")
+        raise IndexNotFoundError("index not found; run `wegrep init` first")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -75,7 +75,7 @@ def search(
     provider_config: dict[str, Any],
     manifest: dict[str, Any],
 ) -> list[SearchResult]:
-    index_dir = root / ".egrep"
+    index_dir = root / ".wegrep"
     query_embedding = embed(
         provider_config["embedding"]["base_url"],
         provider_config["embedding"]["api_key"],

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from egrep.chunking import chunk_workspace_file, read_docstore, write_docstore
-from egrep.discovery import WorkspaceFile
+from wegrep.chunking import chunk_workspace_file, read_docstore, write_docstore
+from wegrep.discovery import WorkspaceFile
 
 
 def workspace_file(tmp_path: Path, name: str, file_type: str, text: str) -> WorkspaceFile:
@@ -113,7 +113,7 @@ def test_overlong_markdown_display_chunk_creates_children(tmp_path: Path) -> Non
 
 def test_docstore_persists_display_chunks_by_id(tmp_path: Path) -> None:
     chunked = chunk_workspace_file(workspace_file(tmp_path, "notes.txt", "text", "hello\n"))
-    docstore_path = tmp_path / ".egrep" / "docstore.jsonl"
+    docstore_path = tmp_path / ".wegrep" / "docstore.jsonl"
 
     write_docstore(docstore_path, chunked.display_chunks)
 

@@ -9,11 +9,11 @@ from .errors import IndexNotFoundError
 
 def run_list(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
-    manifest_path = root / ".egrep" / "manifest.json"
+    manifest_path = root / ".wegrep" / "manifest.json"
     if not manifest_path.exists():
-        raise IndexNotFoundError("index not found; run `egrep init` first")
+        raise IndexNotFoundError("index not found; run `wegrep init` first")
 
-    docstore_path = root / ".egrep" / "docstore.jsonl"
+    docstore_path = root / ".wegrep" / "docstore.jsonl"
     paths: set[str] = set()
     if docstore_path.exists():
         with docstore_path.open("r", encoding="utf-8") as f:

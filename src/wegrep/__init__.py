@@ -1,4 +1,4 @@
-"""egrep hybrid workspace search package."""
+"""wegrep hybrid workspace search package."""
 
 __all__ = ["__version__"]
 
